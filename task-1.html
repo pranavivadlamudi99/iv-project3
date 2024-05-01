@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 3: Visualization System</title>
+    <!-- Include D3.js library -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* Add CSS styling here */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        h1 {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .visualization {
+            margin: 20px auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            max-width: 800px;
+        }
+
+        .visualization h2 {
+            margin-top: 0;
+            font-size: 18px;
+        }
+
+        /* Add tooltip styling */
+        .tooltip {
+            position: absolute;
+            background-color: #f9f9f9;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Project 3: Visualization System</h1>
+
+    <!-- Div placeholders for visualizations -->
+    <div class="visualization" id="bar-chart">
+        <h2>Comparing Fuel Efficiency Across Manufacturers</h2>
+        <!-- Add bar chart here -->
+        <svg width="800" height="400"></svg>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            // Function to load dataset and create visualizations
+            function loadData() {
+                // Load dataset using D3.js
+                d3.csv("a1-cars.csv").then(function(cars) {
+                    // Convert numeric data to numbers
+                    cars.forEach(function(d) {
+                        d.MPG = +d.MPG;
+                    });
+
+                    // Calculate average MPG for each manufacturer
+                    const mpgByManufacturer = d3.group(cars, d => d.Manufacturer);
+                    const averageMPG = Array.from(mpgByManufacturer, ([key, value]) => ({
+                        Manufacturer: key,
+                        AvgMPG: d3.mean(value, d => d.MPG)
+                    }));
+
+                    // Bar Chart
+                    // Adjust margins and SVG dimensions
+                    const margin = { top: 20, right: 30, bottom: 60, left: 60 };
+                    const width = 800 - margin.left - margin.right;
+                    const height = 500 - margin.top - margin.bottom;
+
+                    // Create SVG element
+                    const svg = d3.select("#bar-chart svg")
+                        .attr("width", width + margin.left + margin.right)
+                        .attr("height", height + margin.top + margin.bottom)
+                        .append("g")
+                        .attr("transform", `translate(${margin.left},${margin.top})`);
+
+                    // Define scales
+                    const x = d3.scaleBand()
+                        .domain(averageMPG.map(d => d.Manufacturer))
+                        .range([0, width])
+                        .padding(0.1);
+
+                    const y = d3.scaleLinear()
+                        .domain([0, d3.max(averageMPG, d => d.AvgMPG)])
+                        .nice()
+                        .range([height, 0]);
+
+                    // Draw bars
+                    svg.selectAll(".bar")
+                        .data(averageMPG)
+                        .join("rect")
+                        .attr("class", "bar")
+                        .attr("x", d => x(d.Manufacturer))
+                        .attr("width", x.bandwidth())
+                        .attr("y", d => y(d.AvgMPG))
+                        .attr("height", d => height - y(d.AvgMPG))
+                        // Add tooltip
+                        .on("mouseover", function(event, d) {
+                            const tooltip = d3.select("#bar-chart").append("div")
+                                .attr("class", "tooltip")
+                                .style("left", (event.pageX) + "px")
+                                .style("top", (event.pageY - 20) + "px");
+                            tooltip.html(`Manufacturer: ${d.Manufacturer}<br>Avg MPG: ${d.AvgMPG.toFixed(2)}`);
+                        })
+                        .on("mouseout", function(event, d) {
+                            d3.select(".tooltip").remove();
+                        });
+
+                    // Add X axis with rotated labels
+                    svg.append("g")
+                        .attr("class", "axis-x")
+                        .attr("transform", `translate(0,${height})`)
+                        .call(d3.axisBottom(x))
+                        .selectAll("text")
+                        .attr("transform", "rotate(-45)")
+                        .attr("x", -10) // Adjust label position
+                        .attr("y", 0)   // Adjust label position
+                        .style("text-anchor", "end");
+
+                    // Add Y axis
+                    svg.append("g")
+                        .attr("class", "axis-y")
+                        .call(d3.axisLeft(y));
+
+                }).catch(function(error) {
+                    console.log("Error loading the dataset: " + error);
+                });
+            }
+
+            // Call the loadData function when the DOM is fully loaded
+            loadData();
+        });
+    </script>
+</body>
+</html>

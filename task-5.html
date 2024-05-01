@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 3: Visualization System</title>
+    <!-- Include D3.js library -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* Add CSS styling here */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        h1 {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .visualization {
+            margin: 20px auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            max-width: 800px;
+        }
+
+        .visualization h2 {
+            margin-top: 0;
+            font-size: 18px;
+        }
+
+        /* Add tooltip styling */
+        .tooltip {
+            position: absolute;
+            background-color: #f9f9f9;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Analyzing Fuel Efficiency Trends Over Model Years</h1>
+
+    <div class="visualization" id="line-chart">
+        <h2>Line Chart</h2>
+        <!-- Add line chart here -->
+        <svg width="600" height="400"></svg>
+    </div>
+
+    <div id="tooltip" class="tooltip"></div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            // Function to load dataset and create visualizations
+            function loadData() {
+                // Load dataset using D3.js
+                d3.csv("a1-cars.csv").then(function(cars) {
+                    // Convert numeric data to numbers
+                    cars.forEach(function(d) {
+                        d.MPG = +d.MPG;
+                    });
+
+                    
+                    // Line Chart
+                    // Define SVG dimensions
+                    const lineChartWidth = 600;
+                    const lineChartHeight = 400;
+                    const lineChartPadding = 50; // Increase the padding
+
+                    // Create SVG element for line chart
+                    const lineChartSvg = d3.select("#line-chart svg") // Change the selection to target the SVG element within the line-chart div
+                        .attr("width", lineChartWidth)
+                        .attr("height", lineChartHeight);
+
+                    // Calculate average MPG for each Model Year
+                    const avgMPGByYear = d3.rollup(cars, v => d3.mean(v, d => d.MPG), d => d["Model Year"]);
+
+                    // Convert the map to an array of objects
+                    const avgMPGData = Array.from(avgMPGByYear, ([year, avgMPG]) => ({ "Model Year": year, "Avg MPG": avgMPG }));
+
+                    // Define scales
+                    const xScale = d3.scaleLinear()
+                        .domain(d3.extent(avgMPGData, d => d["Model Year"]))
+                        .range([lineChartPadding, lineChartWidth - lineChartPadding]);
+
+                    const yScale = d3.scaleLinear()
+                        .domain([0, d3.max(avgMPGData, d => d["Avg MPG"])])
+                        .range([lineChartHeight - lineChartPadding, lineChartPadding]);
+
+                    // Define line function
+                    const line = d3.line()
+                        .x(d => xScale(d["Model Year"]))
+                        .y(d => yScale(d["Avg MPG"]));
+
+                    // Create path for line chart
+                    const linePath = lineChartSvg.append("path")
+                        .datum(avgMPGData)
+                        .attr("fill", "none")
+                        .attr("stroke", "steelblue")
+                        .attr("stroke-width", 2)
+                        .attr("d", line)
+                        .on("mouseover", function() {
+                            tooltip.style("visibility", "visible");
+                        })
+                        .on("mousemove", function(event, d) {
+                            const bisectYear = d3.bisector(d => d["Model Year"]).left;
+                            const mouseYear = xScale.invert(d3.pointer(event)[0]);
+                            const index = bisectYear(avgMPGData, mouseYear, 1);
+                            const selectedData = avgMPGData[index - 1];
+
+                            tooltip
+                                .style("top", (event.pageY - 10) + "px")
+                                .style("left", (event.pageX + 10) + "px")
+                                .html(`
+                                    <p>Model Year: ${selectedData["Model Year"]}</p>
+                                    <p>Avg MPG: ${selectedData["Avg MPG"].toFixed(2)}</p>
+                                `);
+                        })
+                        .on("mouseout", function() {
+                            tooltip.style("visibility", "hidden");
+                        });
+
+                    const tooltip = d3.select("#tooltip");
+
+                    // Add X axis
+                    lineChartSvg.append("g")
+                        .attr("transform", `translate(0, ${lineChartHeight - lineChartPadding})`)
+                        .call(d3.axisBottom(xScale));
+
+                    // Add Y axis
+                    lineChartSvg.append("g")
+                        .attr("transform", `translate(${lineChartPadding}, 0)`)
+                        .call(d3.axisLeft(yScale));
+
+                    // Add X axis label
+                    lineChartSvg.append("text")
+                        .attr("x", lineChartWidth / 2)
+                        .attr("y", lineChartHeight)
+                        .attr("text-anchor", "middle")
+                        .text("Model Year");
+
+                    // Add Y axis label
+                    lineChartSvg.append("text")
+                        .attr("transform", "rotate(-90)")
+                        .attr("x", -lineChartHeight / 2)
+                        .attr("y", 15)
+                        .attr("text-anchor", "middle")
+                        .text("Avg MPG");
+
+                }).catch(function(error) {
+                    console.log("Error loading the dataset: " + error);
+                });
+            }
+
+            // Call the loadData function when the DOM is fully loaded
+            loadData();
+        });
+    </script>
+</body>
+</html>

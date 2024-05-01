@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 3: Visualization System</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        h1 {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .visualization {
+            margin: 20px auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            max-width: 800px;
+        }
+
+        .tooltip {
+            position: absolute;
+            background-color: #f9f9f9;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Visualizing the Distribution of Cars by Origin</h1>
+    <div class="visualization">
+        <svg width="400" height="400"></svg>
+    </div>
+
+    <script>
+        d3.csv("a1-cars.csv").then(function(cars) {
+            const width = 400;
+            const height = 400;
+            const radius = Math.min(width, height) / 2;
+
+            const svg = d3.select("svg")
+                .attr("width", width)
+                .attr("height", height)
+                .append("g")
+                .attr("transform", `translate(${width / 2},${height / 2})`);
+
+            const originCounts = Array.from(d3.rollup(cars, v => v.length, d => d.Origin), ([key, value]) => ({ origin: key, count: value }));
+
+            const pie = d3.pie()
+                .value(d => d.count)
+                .sort(null);
+
+            const arcs = pie(originCounts);
+
+            const arc = d3.arc()
+                .innerRadius(0)
+                .outerRadius(radius);
+
+            svg.selectAll("path")
+                .data(arcs)
+                .enter()
+                .append("path")
+                .attr("fill", (d, i) => d3.schemeCategory10[i])
+                .attr("d", arc)
+                .attr("stroke", "white")
+                .style("stroke-width", "2px")
+                .on("mouseover", function(event, d) {
+                    const tooltip = d3.select("body").append("div")
+                        .attr("class", "tooltip")
+                        .style("left", (event.pageX) + "px")
+                        .style("top", (event.pageY - 20) + "px");
+                    tooltip.html(`Origin: ${d.data.origin}<br>Count: ${d.data.count}`);
+                })
+                .on("mouseout", function(event, d) {
+                    d3.select(".tooltip").remove();
+                });
+        }).catch(function(error) {
+            console.log("Error loading the dataset: " + error);
+        });
+    </script>
+</body>
+</html>

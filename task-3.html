@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 3: Visualization System</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        h1 {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .visualization {
+            margin: 20px auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            max-width: 800px;
+        }
+
+        .tooltip {
+            position: absolute;
+            background-color: #f9f9f9;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Exploring the Distribution of MPG by Car Origin</h1>
+    <div class="visualization">
+        <svg width="600" height="400"></svg>
+    </div>
+
+    <script>
+        d3.csv("a1-cars.csv").then(function(cars) {
+            cars.forEach(function(d) {
+                d.MPG = +d.MPG;
+            });
+
+            const margin = { top: 20, right: 20, bottom: 50, left: 60 };
+            const width = 600 - margin.left - margin.right;
+            const height = 400 - margin.top - margin.bottom;
+
+            const svg = d3.select("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+
+            const xScale = d3.scaleBand()
+                .domain(cars.map(d => d.Origin))
+                .range([0, width])
+                .padding(0.1);
+
+            const yScale = d3.scaleLinear()
+                .domain([0, d3.max(cars, d => d.MPG)])
+                .range([height, 0]);
+
+            svg.selectAll("rect")
+                .data(cars)
+                .enter()
+                .append("rect")
+                .attr("x", d => xScale(d.Origin))
+                .attr("y", d => yScale(d.MPG))
+                .attr("width", xScale.bandwidth())
+                .attr("height", d => height - yScale(d.MPG))
+                .attr("fill", "steelblue")
+                .on("mouseover", function(event, d) {
+                    const tooltip = d3.select("body").append("div")
+                        .attr("class", "tooltip")
+                        .style("left", (event.pageX) + "px")
+                        .style("top", (event.pageY - 20) + "px");
+                    tooltip.html(`Origin: ${d.Origin}<br>MPG: ${d.MPG}`);
+                })
+                .on("mouseout", function(event, d) {
+                    d3.select(".tooltip").remove();
+                });
+
+            svg.append("g")
+                .attr("transform", `translate(0,${height})`)
+                .call(d3.axisBottom(xScale));
+
+            svg.append("g")
+                .call(d3.axisLeft(yScale));
+        }).catch(function(error) {
+            console.log("Error loading the dataset: " + error);
+        });
+    </script>
+</body>
+</html>

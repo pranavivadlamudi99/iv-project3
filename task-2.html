@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 3: Visualization System</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        h1 {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .visualization {
+            margin: 20px auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            max-width: 800px;
+        }
+
+        .tooltip {
+            position: absolute;
+            background-color: #f9f9f9;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            pointer-events: none;
+        }
+
+        .brush {
+            fill: none;
+            pointer-events: all;
+        }
+
+        .brush .overlay {
+            fill: none;
+            cursor: crosshair;
+        }
+
+        .brush .selection {
+            fill: #69b3a2;
+            fill-opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <h1>Analyzing the Relationship Between MPG and Weight</h1>
+    <div class="visualization">
+        <svg width="600" height="400"></svg>
+    </div>
+
+    <script>
+        d3.csv("a1-cars.csv").then(function(cars) {
+            cars.forEach(function(d) {
+                d.MPG = +d.MPG;
+                d.Weight = +d.Weight;
+            });
+
+            const margin = { top: 20, right: 20, bottom: 50, left: 60 };
+            const width = 600 - margin.left - margin.right;
+            const height = 400 - margin.top - margin.bottom;
+
+            const svg = d3.select("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+
+            const xScale = d3.scaleLinear()
+                .domain([0, d3.max(cars, d => d.Weight)])
+                .range([0, width]);
+
+            const yScale = d3.scaleLinear()
+                .domain([0, d3.max(cars, d => d.MPG)])
+                .range([height, 0]);
+
+            svg.selectAll("circle")
+                .data(cars)
+                .enter()
+                .append("circle")
+                .attr("cx", d => xScale(d.Weight))
+                .attr("cy", d => yScale(d.MPG))
+                .attr("r", 5)
+                .attr("fill", "steelblue")
+                .on("mouseover", function(event, d) {
+                    const tooltip = d3.select("body").append("div")
+                        .attr("class", "tooltip")
+                        .style("left", (event.pageX) + "px")
+                        .style("top", (event.pageY - 20) + "px");
+                    tooltip.html(`Weight: ${d.Weight}<br>MPG: ${d.MPG}`);
+                })
+                .on("mouseout", function(event, d) {
+                    d3.select(".tooltip").remove();
+                });
+
+            svg.append("g")
+                .attr("class", "brush")
+                .call(d3.brush()
+                    .extent([[0, 0], [width, height]])
+                    .on("brush", brushed)
+                );
+
+            function brushed(event) {
+                if (!event.selection) return;
+                const [[x0, y0], [x1, y1]] = event.selection;
+                const filteredData = cars.filter(d =>
+                    xScale(d.Weight) >= x0 && xScale(d.Weight) <= x1 &&
+                    yScale(d.MPG) >= y0 && yScale(d.MPG) <= y1
+                );
+                svg.selectAll("circle")
+                    .attr("fill", d => filteredData.includes(d) ? "steelblue" : "lightgray");
+            }
+
+            svg.append("g")
+                .attr("transform", `translate(0,${height})`)
+                .call(d3.axisBottom(xScale));
+
+            svg.append("g")
+                .call(d3.axisLeft(yScale));
+        }).catch(function(error) {
+            console.log("Error loading the dataset: " + error);
+        });
+    </script>
+</body>
+</html>
